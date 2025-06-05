@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BINGO</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+        min-height: 100vh; /* Ensure body takes full height */
+        display: flex;
+        flex-direction: column;
+      }
+
+      .game-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        flex-wrap: wrap;
+        flex-grow: 1; /* Allow game container to grow and push messages down */
+      }
+
+      .player-board {
+        display: block;
+        margin: 0 auto;
+        min-width: 250px;
+        max-width: 400px;
+      }
+
+      .opponent-board {
+        display: none !important;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        gap: 5px;
+        margin: 20px 0;
+      }
+
+      #connectionScreen.hidden {
+        display: none !important;
+      }
+
+      .cell {
+        width: 100%;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f0f0f0;
+        border: 1px solid #999;
+        font-size: 20px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .cell.marked {
+        background-color: #b3e5fc;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        margin: 5px;
+      }
+
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      .bingo-letters {
+        display: flex;
+        justify-content: space-around;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+
+      .letter {
+        padding: 5px 10px;
+      }
+
+      .letter.completed {
+        text-decoration: line-through;
+        color: #f44336;
+      }
+
+      .status {
+        margin: 10px 0;
+        min-height: 24px;
+      }
+
+      .status.outcome {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .status.instruction {
+        font-weight: normal;
+        font-style: italic;
+        color: #555;
+      }
+
+      .outcome.win {
+        color: #4caf50; /* Green for win */
+      }
+
+      .outcome.loss {
+        color: #f44336; /* Red for loss */
+      }
+
+      .outcome.tie {
+        color: #ffc107; /* Yellow for tie */
+      }
+
+      .opponent-status {
+        color: #757575;
+        font-style: italic;
+        font-size: 14px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      #connectionScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        overflow-y: auto; /* Allow scrolling if content overflows */
+      }
+
+      #connectionMessage {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+        width: 80%;
+        max-width: 400px;
+      }
+
+      #connectInput {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        box-sizing: border-box;
+        font-size: 16px;
+        font-family: monospace;
+      }
+
+      .connection-status {
+        margin-top: 10px;
+        font-style: italic;
+      }
+
+      #myPeerId {
+        word-break: break-all;
+        font-family: monospace;
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 3px;
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      .connection-option {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+      }
+
+      .connection-actions {
+        margin-top: 15px;
+      }
+
+      /* Footer for messages to prevent overlap */
+      .message-footer {
+        margin-top: auto; /* Push to bottom of flex container */
+        padding: 10px 0;
+      }
+
+      /* Media Queries for Mobile Responsiveness */
+      @media (max-width: 600px) {
+        .game-container {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .player-board {
+          margin: 10px 0;
+          max-width: 100%; /* Full width on mobile */
+        }
+
+        .board {
+          gap: 3px; /* Reduce gap for smaller screens */
+        }
+
+        .cell {
+          font-size: 16px; /* Smaller font size on mobile */
+        }
+
+        .bingo-letters {
+          font-size: 20px; /* Adjust letter size */
+        }
+
+        .controls {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        button {
+          width: 100%;
+          max-width: 200px; /* Limit button width */
+        }
+
+        #connectionMessage {
+          width: 90%; /* Wider on mobile */
+          padding: 15px;
+        }
+
+        .status,
+        .status.outcome {
+          font-size: 16px; /* Smaller text on mobile */
+          padding: 5px;
+        }
+
+        /* Ensure messages don’t overlap cells */
+        .message-footer {
+          position: relative;
+          width: 100%;
+          min-height: 60px; /* Reserve space for messages */
+        }
+      }
+
+      @media (max-height: 500px) {
+        #connectionScreen {
+          align-items: flex-start; /* Start from top if height is very small */
+          padding-top: 20px;
+        }
+
+        #connectionMessage {
+          margin-top: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="color: #deac40">BINGO</h1>
+
+    <div class="controls">
+      <button id="randomizeBtn">Randomize</button>
+      <button id="playBtn" disabled>Play</button>
+      <button id="connectBtn">Connect</button>
+      <button id="reconnectBtn" style="display: none">Reconnect</button>
+    </div>
+
+    <div class="game-container">
+      <div class="player-board">
+        <h2>Your Board</h2>
+        <div class="bingo-letters">
+          <div class="letter" id="player-B">B</div>
+          <div class="letter" id="player-I">I</div>
+          <div class="letter" id="player-N">N</div>
+          <div class="letter" id="player-G">G</div>
+          <div class="letter" id="player-O">O</div>
+        </div>
+        <div class="board" id="playerBoard"></div>
+        <div class="status" id="playerStatus">Not Ready</div>
+      </div>
+
+      <div
+        class="opponent-board hidden"
+        id="opponentSection"
+        style="display: none"
+      >
+        <h2>Opponent's Board</h2>
+        <div class="bingo-letters">
+          <div class="letter" id="opponent-B">B</div>
+          <div class="letter" id="opponent-I">I</div>
+          <div class="letter" id="opponent-N">N</div>
+          <div class="letter" id="opponent-G">G</div>
+          <div class="letter" id="opponent-O">O</div>
+        </div>
+        <div class="board" id="opponentBoard"></div>
+        <div class="opponent-status" id="opponentStatusText">
+          Waiting for opponent...
+        </div>
+        <div class="status" id="opponentStatus">Not Ready</div>
+      </div>
+    </div>
+
+    <div class="message-footer">
+      <div class="status outcome" id="outcomeMessage"></div>
+      <div class="status instruction" id="statusMessage"></div>
+    </div>
+
+    <div id="connectionScreen">
+      <div id="connectionMessage">
+        <h2>Connect to Play</h2>
+
+        <div class="connection-option">
+          <h3>Host a Game</h3>
+          <p>Create a new game and share your ID with another player</p>
+          <div id="myPeerId">Generating your ID...</div>
+          <div class="connection-actions">
+            <button id="copyIdBtn">Copy My ID</button>
+          </div>
+        </div>
+
+        <div class="connection-option">
+          <h3>Join a Game</h3>
+          <p>Enter the ID shared by another player</p>
+          <input
+            type="text"
+            id="connectInput"
+            placeholder="Paste peer ID here"
+          />
+          <div class="connection-actions">
+            <button id="connectToPeerBtn">Connect</button>
+          </div>
+        </div>
+
+        <div class="connection-status" id="connectionStatus"></div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+
+    <script>
+      const state = {
+        playerBoard: [],
+        opponentBoard: [],
+        playerMarked: Array(25).fill(false),
+        opponentMarked: Array(25).fill(false),
+        playerLetters: { B: false, I: false, N: false, G: false, O: false },
+        opponentLetters: { B: false, I: false, N: false, G: false, O: false },
+        gameStarted: false,
+        playerTurn: false,
+        isHost: false,
+        connected: false,
+        peer: null,
+        connection: null,
+        peerId: null,
+        playerReady: false,
+        opponentReady: false,
+        gameEnded: false,
+      };
+
+      const playerBoardEl = document.getElementById("playerBoard");
+      const opponentBoardEl = document.getElementById("opponentBoard");
+      const randomizeBtn = document.getElementById("randomizeBtn");
+      const playBtn = document.getElementById("playBtn");
+      const connectBtn = document.getElementById("connectBtn");
+      const reconnectBtn = document.getElementById("reconnectBtn");
+      const outcomeMessage = document.getElementById("outcomeMessage");
+      const statusMessage = document.getElementById("statusMessage");
+      const connectionScreen = document.getElementById("connectionScreen");
+      const connectInput = document.getElementById("connectInput");
+      const connectToPeerBtn = document.getElementById("connectToPeerBtn");
+      const connectionStatus = document.getElementById("connectionStatus");
+      const opponentSection = document.getElementById("opponentSection");
+      const opponentStatusText = document.getElementById("opponentStatusText");
+      const myPeerIdEl = document.getElementById("myPeerId");
+      const copyIdBtn = document.getElementById("copyIdBtn");
+
+      function initGame() {
+        createBoard(playerBoardEl, true);
+        createBoard(opponentBoardEl, false);
+        randomizeBoard();
+
+        randomizeBtn.addEventListener("click", randomizeBoard);
+        playBtn.addEventListener("click", startGame);
+        connectBtn.addEventListener("click", showConnectionScreen);
+        reconnectBtn.addEventListener("click", showConnectionScreen);
+        connectToPeerBtn.addEventListener("click", connectToPeer);
+        copyIdBtn.addEventListener("click", copyPeerId);
+
+        initPeerConnection();
+      }
+
+      function createBoard(boardEl, isPlayer) {
+        console.log(`Creating board for ${isPlayer ? "player" : "opponent"}`);
+        boardEl.innerHTML = "";
+        for (let i = 0; i < 25; i++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.index = i;
+
+          if (isPlayer) {
+            cell.addEventListener("click", () => cellClicked(i));
+          }
+
+          boardEl.appendChild(cell);
+        }
+        console.log(`Board created with ${boardEl.children.length} cells`);
+      }
+
+      function randomizeBoard() {
+        state.playerMarked = Array(25).fill(false);
+        state.opponentMarked = Array(25).fill(false);
+        state.playerReady = false;
+        if (state.connected) {
+          sendMessage({
+            type: "readiness",
+            ready: false,
+          });
+        }
+        state.opponentReady = false;
+        document.getElementById("playerStatus").textContent = "Not Ready";
+
+        resetLetters();
+
+        const numbers = Array.from({ length: 25 }, (_, i) => i + 1);
+        shuffleArray(numbers);
+
+        state.playerBoard = [...numbers];
+
+        const cells = playerBoardEl.querySelectorAll(".cell");
+        cells.forEach((cell, i) => {
+          cell.textContent = state.playerBoard[i];
+          cell.classList.remove("marked");
+        });
+
+        if (state.connected) {
+          sendMessage({
+            type: "board",
+            board: state.playerBoard,
+          });
+        }
+
+        playBtn.disabled = false;
+        updateStatus("Board randomized! Press Play to start a new game.");
+        updateOutcome("", "");
+      }
+
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function initPeerConnection() {
+        resetConnection();
+
+        const randomId = "bingo-" + Math.random().toString(36).substr(2, 9);
+        state.peerId = randomId;
+
+        state.peer = new Peer(randomId, {
+          debug: 2,
+          config: {
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+              { urls: "stun:stun2.l.google.com:19302" },
+              { urls: "stun:stun3.l.google.com:19302" },
+              { urls: "stun:stun4.l.google.com:19302" },
+            ],
+          },
+        });
+
+        state.peer.on("open", function (id) {
+          console.log("My peer ID is: " + id);
+          myPeerIdEl.textContent = id;
+          connectionStatus.textContent =
+            "Your ID is ready to share. Wait for someone to connect or enter an ID to join a game.";
+        });
+
+        state.peer.on("connection", function (conn) {
+          handleIncomingConnection(conn);
+        });
+
+        state.peer.on("error", function (err) {
+          console.log("Peer error:", err);
+
+          if (err.type === "peer-unavailable") {
+            connectionStatus.textContent =
+              "Could not find the player with that ID. Please check the ID and try again.";
+          } else if (err.type === "network" || err.type === "disconnected") {
+            connectionStatus.textContent =
+              "Network error. Please check your connection and try again.";
+          } else {
+            connectionStatus.textContent = "Connection error: " + err.message;
+          }
+        });
+      }
+
+      function cellClicked(index) {
+        if (!state.gameStarted || !state.playerTurn) return;
+        if (state.playerMarked[index]) return;
+
+        state.playerMarked[index] = true;
+
+        const number = state.playerBoard[index];
+        sendMessage({
+          type: "move",
+          number: number,
+        });
+
+        // Update local copy of opponent's marked status
+        const opponentIndex = state.opponentBoard.indexOf(number);
+        if (opponentIndex !== -1) {
+          state.opponentMarked[opponentIndex] = true;
+        }
+
+        updateBoards();
+        checkForCompletedLines("player", state.playerBoard, state.playerMarked);
+        checkForCompletedLines(
+          "opponent",
+          state.opponentBoard,
+          state.opponentMarked
+        );
+
+        setTimeout(() => {
+          const playerWins = checkWinCondition("player");
+          const opponentWins = checkWinCondition("opponent");
+          console.log(
+            `After move: Player wins: ${playerWins}, Opponent wins: ${opponentWins}`
+          );
+
+          if (playerWins && opponentWins) {
+            console.log("Tie game detected!");
+            sendMessage({
+              type: "gameOver",
+              winner: "tie",
+            });
+            endGame("tie");
+            return;
+          }
+
+          if (playerWins) {
+            console.log("Player wins!");
+            sendMessage({
+              type: "gameOver",
+              winner: "opponent",
+            });
+            endGame(true);
+            return;
+          }
+
+          if (opponentWins) {
+            console.log("Opponent wins due to player's move!");
+            sendMessage({
+              type: "gameOver",
+              winner: "player",
+            });
+            endGame(false);
+            return;
+          }
+
+          state.playerTurn = false;
+          updateStatus("Opponent's turn...");
+        }, 100);
+      }
+      function handleOpponentMove(number) {
+        const opponentIndex = state.opponentBoard.indexOf(number);
+        if (opponentIndex !== -1) {
+          state.opponentMarked[opponentIndex] = true;
+        }
+
+        const playerIndex = state.playerBoard.indexOf(number);
+        if (playerIndex !== -1) {
+          state.playerMarked[playerIndex] = true;
+        }
+
+        updateBoards();
+        checkForCompletedLines("player", state.playerBoard, state.playerMarked);
+        checkForCompletedLines(
+          "opponent",
+          state.opponentBoard,
+          state.opponentMarked
+        );
+
+        setTimeout(() => {
+          const playerWins = checkWinCondition("player");
+          const opponentWins = checkWinCondition("opponent");
+          console.log(
+            `After opponent move: Player wins: ${playerWins}, Opponent wins: ${opponentWins}`
+          );
+          console.log(`Player marked:`, state.playerMarked);
+          console.log(`Opponent marked:`, state.opponentMarked);
+
+          if (playerWins && opponentWins) {
+            console.log("Tie game detected!");
+            sendMessage({
+              type: "gameOver",
+              winner: "tie",
+            });
+            endGame("tie");
+            return;
+          }
+
+          if (playerWins) {
+            console.log("Player wins due to opponent's move!");
+            sendMessage({
+              type: "gameOver",
+              winner: "opponent",
+            });
+            endGame(true);
+            return;
+          }
+
+          if (opponentWins) {
+            console.log("Opponent wins!");
+            sendMessage({
+              type: "gameOver",
+              winner: "player",
+            });
+            endGame(false);
+            return;
+          }
+
+          state.playerTurn = true;
+          updateStatus("Your turn!");
+        }, 100);
+      }
+
+      function updateBoards() {
+        console.log("Updating boards...");
+
+        const playerCells = playerBoardEl.querySelectorAll(".cell");
+        playerCells.forEach((cell, i) => {
+          if (state.playerMarked[i]) {
+            console.log(`Marking player cell ${i}`);
+            cell.classList.add("marked");
+          } else {
+            cell.classList.remove("marked");
+          }
+        });
+
+        const opponentCells = opponentBoardEl.querySelectorAll(".cell");
+        opponentCells.forEach((cell, i) => {
+          if (state.opponentMarked[i]) {
+            console.log(`Marking opponent cell ${i} (internally)`);
+            cell.classList.add("marked");
+          } else {
+            cell.classList.remove("marked");
+          }
+        });
+      }
+
+      function checkForCompletedLines(player, board, marked) {
+        const letters = ["B", "I", "N", "G", "O"];
+        const completedLetters = state[player + "Letters"];
+        const completedLines = {
+          rows: Array(5).fill(false),
+          cols: Array(5).fill(false),
+          mainDiagonal: false,
+          antiDiagonal: false,
+        };
+
+        for (let row = 0; row < 5; row++) {
+          let complete = true;
+          for (let col = 0; col < 5; col++) {
+            const index = row * 5 + col;
+            if (!marked[index]) {
+              complete = false;
+              break;
+            }
+          }
+          if (complete) {
+            console.log(`${player} completed row ${row}`);
+            completedLines.rows[row] = true;
+          }
+        }
+
+        for (let col = 0; col < 5; col++) {
+          let complete = true;
+          for (let row = 0; row < 5; row++) {
+            const index = row * 5 + col;
+            if (!marked[index]) {
+              complete = false;
+              break;
+            }
+          }
+          if (complete) {
+            console.log(`${player} completed column ${col}`);
+            completedLines.cols[col] = true;
+          }
+        }
+
+        let mainDiagonal = true;
+        for (let i = 0; i < 5; i++) {
+          if (!marked[i * 5 + i]) {
+            mainDiagonal = false;
+            break;
+          }
+        }
+        if (mainDiagonal) {
+          console.log(`${player} completed main diagonal`);
+          completedLines.mainDiagonal = true;
+        }
+
+        let antiDiagonal = true;
+        for (let i = 0; i < 5; i++) {
+          if (!marked[i * 5 + (4 - i)]) {
+            antiDiagonal = false;
+            break;
+          }
+        }
+        if (antiDiagonal) {
+          console.log(`${player} completed anti-diagonal`);
+          completedLines.antiDiagonal = true;
+        }
+
+        const linesCompleted =
+          completedLines.rows.filter(Boolean).length +
+          completedLines.cols.filter(Boolean).length +
+          (completedLines.mainDiagonal ? 1 : 0) +
+          (completedLines.antiDiagonal ? 1 : 0);
+
+        const distinctLines = Math.min(linesCompleted, 5);
+        console.log(`${player} has completed ${distinctLines} distinct lines`);
+
+        letters.forEach((letter) => {
+          completedLetters[letter] = false;
+          document
+            .getElementById(`${player}-${letter}`)
+            .classList.remove("completed");
+        });
+
+        for (let i = 0; i < distinctLines; i++) {
+          completedLetters[letters[i]] = true;
+          document
+            .getElementById(`${player}-${letters[i]}`)
+            .classList.add("completed");
+        }
+      }
+
+      function checkWinCondition(player) {
+        const completedLetters = state[player + "Letters"];
+        const completedCount = Object.values(completedLetters).filter(
+          (completed) => completed
+        ).length;
+        console.log(`${player} has ${completedCount}/5 letters completed`);
+        return completedCount === 5;
+      }
+
+      function startGame() {
+        console.log("startGame called");
+        if (!state.connected) {
+          updateStatus("Connect to an opponent first!");
+          return;
+        }
+
+        state.playerReady = true;
+        document.getElementById("playerStatus").textContent = "Ready";
+
+        sendMessage({
+          type: "readiness",
+          ready: true,
+        });
+
+        if (state.playerReady && state.opponentReady) {
+          if (state.isHost) {
+            startGameLocal(true);
+            sendMessage({
+              type: "startGame",
+              firstTurn: false,
+            });
+          }
+        } else {
+          updateStatus("Waiting for opponent to be ready...");
+        }
+
+        randomizeBtn.disabled = true;
+        playBtn.disabled = true;
+      }
+
+      function startGameLocal(firstTurn) {
+        console.log("startGameLocal called with firstTurn:", firstTurn);
+        state.gameStarted = true;
+        state.playerTurn = firstTurn;
+        state.gameEnded = false;
+
+        connectBtn.disabled = true;
+
+        updateStatus(
+          firstTurn
+            ? "Game started! Your turn!"
+            : "Game started! Opponent's turn!"
+        );
+        updateOutcome("", "");
+      }
+
+      function showConnectionScreen() {
+        initPeerConnection();
+        connectionScreen.classList.remove("hidden");
+        connectInput.value = "";
+        connectionStatus.textContent = "";
+      }
+
+      function resetConnection() {
+        if (state.peer) {
+          state.peer.destroy();
+          state.peer = null;
+        }
+
+        if (state.connection) {
+          state.connection.close();
+          state.connection = null;
+        }
+
+        state.connected = false;
+        state.gameStarted = false;
+        state.playerReady = false;
+        state.opponentReady = false;
+        state.peerId = null;
+        state.gameEnded = false;
+      }
+
+      function connectToPeer() {
+        const peerId = connectInput.value.trim();
+
+        if (!peerId) {
+          connectionStatus.textContent = "Please enter a peer ID.";
+          return;
+        }
+
+        connectionStatus.textContent = "Connecting...";
+
+        try {
+          const conn = state.peer.connect(peerId, {
+            reliable: true,
+          });
+
+          if (conn) {
+            handleOutgoingConnection(conn);
+          }
+        } catch (err) {
+          console.log("Error connecting to peer:", err);
+          connectionStatus.textContent = "Failed to connect: " + err.message;
+        }
+      }
+
+      function handleOutgoingConnection(conn) {
+        state.connection = conn;
+        state.isHost = false;
+
+        conn.on("open", function () {
+          console.log("Connection established!");
+          connectionStatus.textContent = "Connected! Setting up the game...";
+
+          sendMessage({
+            type: "hello",
+            board: state.playerBoard,
+          });
+
+          onConnectionEstablished();
+        });
+
+        setupConnectionListeners(conn);
+      }
+
+      function handleIncomingConnection(conn) {
+        if (state.connected) {
+          console.log("Already connected, rejecting new connection");
+          return;
+        }
+
+        state.connection = conn;
+        state.isHost = true;
+
+        console.log("Incoming connection!");
+        connectionStatus.textContent =
+          "Player connected! Setting up the game...";
+
+        setupConnectionListeners(conn);
+
+        sendMessage({
+          type: "hello",
+          board: state.playerBoard,
+        });
+
+        console.log("Transitioning to game screen...");
+        onConnectionEstablished();
+      }
+
+      function setupConnectionListeners(conn) {
+        conn.on("data", function (data) {
+          console.log("Received data:", data);
+          handleMessage(data);
+        });
+
+        conn.on("close", function () {
+          console.log("Connection closed");
+          handleDisconnection();
+        });
+
+        conn.on("error", function (err) {
+          console.log("Connection error:", err);
+          connectionStatus.textContent = "Connection error: " + err.message;
+          handleDisconnection();
+        });
+      }
+
+      function onConnectionEstablished() {
+        console.log("onConnectionEstablished called");
+        state.connected = true;
+
+        connectionScreen.classList.add("hidden");
+        console.log("Connection screen hidden", connectionScreen.style.display);
+
+        playerBoardEl.style.display = "grid";
+        console.log("Player board display:", playerBoardEl.style.display);
+
+        playBtn.disabled = false;
+        randomizeBtn.disabled = false;
+
+        reconnectBtn.style.display = "inline-block";
+        connectBtn.style.display = "none";
+
+        updateStatus(
+          "Connected! Randomize your board and press Play to start."
+        );
+        updateOutcome("", "");
+        document.getElementById("playerStatus").textContent = "Not Ready";
+
+        resetLetters();
+      }
+
+      function handleDisconnection() {
+        state.connected = false;
+        state.gameStarted = false;
+        state.playerReady = false;
+        state.opponentReady = false;
+        state.gameEnded = false;
+
+        opponentStatusText.textContent = "Opponent disconnected";
+        updateStatus("Opponent disconnected. Connect again to play.");
+        updateOutcome("", "");
+        document.getElementById("playerStatus").textContent = "Not Ready";
+
+        randomizeBtn.disabled = false;
+        playBtn.disabled = true;
+        reconnectBtn.style.display = "inline-block";
+        connectBtn.style.display = "none";
+      }
+
+      function sendMessage(message) {
+        if (state.connection && state.connection.open) {
+          try {
+            state.connection.send(message);
+          } catch (err) {
+            console.log("Error sending message:", err);
+          }
+        }
+      }
+
+      function handleMessage(message) {
+        console.log("Received message:", message);
+        switch (message.type) {
+          case "hello":
+            console.log("Received hello message from opponent", message.board);
+            state.opponentBoard = message.board;
+            updateOpponentBoard();
+            sendMessage({
+              type: "board",
+              board: state.playerBoard,
+            });
+            if (state.isHost) {
+              onConnectionEstablished();
+            }
+            break;
+
+          case "board":
+            console.log("Received board message from opponent", message.board);
+            state.opponentBoard = message.board;
+            updateOpponentBoard();
+            break;
+
+          case "readiness":
+            state.opponentReady = message.ready;
+            document.getElementById("opponentStatus").textContent =
+              message.ready ? "Ready" : "Not Ready";
+            if (state.playerReady && state.opponentReady) {
+              if (state.isHost) {
+                startGameLocal(true);
+                sendMessage({
+                  type: "startGame",
+                  firstTurn: false,
+                });
+              } else {
+                updateStatus("Waiting for host to start the game.");
+              }
+            } else {
+              updateStatus("Waiting for both players to be ready.");
+            }
+            break;
+
+          case "startGame":
+            console.log(
+              "Received startGame message from opponent with firstTurn:",
+              message.firstTurn
+            );
+            startGameLocal(message.firstTurn);
+            break;
+
+          case "move":
+            console.log("Received move message from opponent", message.number);
+            handleOpponentMove(message.number);
+            break;
+
+          case "gameOver":
+            console.log(
+              "Received gameOver message from opponent",
+              message.winner
+            );
+            if (message.winner === "tie") {
+              endGame("tie");
+            } else if (message.winner === "player") {
+              endGame(true);
+            } else {
+              endGame(false);
+            }
+            break;
+
+          default:
+            console.log("Unknown message type:", message.type);
+        }
+      }
+
+      function updateOpponentBoard() {
+        const cells = opponentBoardEl.querySelectorAll(".cell");
+        cells.forEach((cell, i) => {
+          cell.textContent = state.opponentBoard[i];
+        });
+      }
+
+      function copyPeerId() {
+        if (!state.peerId) return;
+
+        navigator.clipboard
+          .writeText(state.peerId)
+          .then(function () {
+            copyIdBtn.textContent = "Copied!";
+            setTimeout(function () {
+              copyIdBtn.textContent = "Copy My ID";
+            }, 2000);
+          })
+          .catch(function (err) {
+            console.error("Could not copy text: ", err);
+            const textArea = document.createElement("textarea");
+            textArea.value = state.peerId;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+              document.execCommand("copy");
+              copyIdBtn.textContent = "Copied!";
+              setTimeout(function () {
+                copyIdBtn.textContent = "Copy My ID";
+              }, 2000);
+            } catch (err) {
+              console.error("Fallback: Could not copy text: ", err);
+            }
+
+            document.body.removeChild(textArea);
+          });
+      }
+
+      function endGame(result) {
+        if (state.gameEnded) return;
+        state.gameEnded = true;
+
+        state.gameStarted = false;
+        state.playerReady = false;
+        state.opponentReady = false;
+        document.getElementById("playerStatus").textContent = "Not Ready";
+
+        updateBoards();
+
+        if (result === "tie") {
+          updateOutcome("Game over! It's a tie!", "tie");
+        } else if (result) {
+          updateOutcome("Congratulations! You won!", "win");
+        } else {
+          updateOutcome("Game over! Your opponent won.", "loss");
+        }
+
+        updateStatus(
+          state.connected
+            ? "Randomize your board to play again."
+            : "Reconnect to play again."
+        );
+
+        randomizeBtn.disabled = false;
+        playBtn.disabled = true;
+      }
+
+      function resetLetters() {
+        const letters = ["B", "I", "N", "G", "O"];
+
+        state.playerLetters = {
+          B: false,
+          I: false,
+          N: false,
+          G: false,
+          O: false,
+        };
+        letters.forEach((letter) => {
+          document
+            .getElementById(`player-${letter}`)
+            .classList.remove("completed");
+        });
+
+        state.opponentLetters = {
+          B: false,
+          I: false,
+          N: false,
+          G: false,
+          O: false,
+        };
+        letters.forEach((letter) => {
+          document
+            .getElementById(`opponent-${letter}`)
+            .classList.remove("completed");
+        });
+
+        state.playerMarked = Array(25).fill(false);
+        state.opponentMarked = Array(25).fill(false);
+        updateBoards();
+      }
+
+      function updateOutcome(message, outcomeType) {
+        console.log("Updating outcome:", message, "Type:", outcomeType);
+        outcomeMessage.textContent = message;
+        outcomeMessage.className = `status outcome ${outcomeType}`;
+      }
+
+      function updateStatus(message) {
+        console.log("Updating status:", message);
+        statusMessage.textContent = message;
+      }
+
+      window.addEventListener("load", initGame);
+    </script>
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics.js";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyD8olTDWVEkrlrElzbUty243Zg28o5KnbA",
+        authDomain: "bingo-6fdcb.firebaseapp.com",
+        projectId: "bingo-6fdcb",
+        storageBucket: "bingo-6fdcb.firebasestorage.app",
+        messagingSenderId: "487138530317",
+        appId: "1:487138530317:web:ac7677fe0f34a7354df144",
+        measurementId: "G-KCP8L4LF86",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+    </script>
+    <script>
+      (function () {
+        function c() {
+          var b = a.contentDocument || a.contentWindow.document;
+          if (b) {
+            var d = b.createElement("script");
+            d.innerHTML =
+              "window.__CF$cv$params={r:'928ea85348e9bf6d',t:'MTc0MzQxMTYzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName("head")[0].appendChild(d);
+          }
+        }
+        if (document.body) {
+          var a = document.createElement("iframe");
+          a.height = 1;
+          a.width = 1;
+          a.style.position = "absolute";
+          a.style.top = 0;
+          a.style.left = 0;
+          a.style.border = "none";
+          a.style.visibility = "hidden";
+          document.body.appendChild(a);
+          if ("loading" !== document.readyState) c();
+          else if (window.addEventListener)
+            document.addEventListener("DOMContentLoaded", c);
+          else {
+            var e = document.onreadystatechange || function () {};
+            document.onreadystatechange = function (b) {
+              e(b);
+              "loading" !== document.readyState &&
+                ((document.onreadystatechange = e), c());
+            };
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
